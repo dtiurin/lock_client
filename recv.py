@@ -3,7 +3,7 @@ import serial
 import threading
 
 EN_485 =  4
-l = 19200
+baudrate = 19200
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(EN_485, GPIO.OUT)
@@ -11,7 +11,7 @@ GPIO.output(EN_485, GPIO.LOW)
 
 sers = []
 sers.append(serial.Serial("/dev/ttyS0", 
-                          l, 
+                          baudrate, 
                           writeTimeout = 1,
                           bytesize=8,
                           parity='N',

@@ -2,38 +2,46 @@ import paho.mqtt.client as mqtt
 
 from send import send_cmd
 
-SERVER_IP = '83.150.204.55'
-SERVER_PORT = 40883
-CLIENT_ID = 'testclient_rpi'
 
-SELF_NAME = 'RPI_TEST_DEVICE_1'
-MQTT_TOPIC = 'test'
+class MQTTConnectionManager(mqtt.Client):
+    PROTOCOL = mqtt.MQTTv31
+    SERVER_IP = '83.150.204.55'
+    SERVER_PORT = 40883
+    
+    # NOTE: unique per device data
+    CLIENT_ID = 'testclient_rpi'
+    DEVICE_NAME = 'RPI_TEST_DEVICE_1'
+    MQTT_TOPIC = 'test'
 
-###################
-# TODO: add other possible commands
-OPEN_COMMAND = 'OPEN'
-###################
+    def __init__(self,):
+        # TODO: move commands to some device class
+        self.OPEN_COMMAND = 'OPEN'
 
-def on_connect(client, userdata, flags, rc):
-    client.publish(MQTT_TOPIC, SELF_NAME)
-    client.subscribe(MQTT_TOPIC)
-    print('connected')
+        super().__init__(self.CLIENT_ID, self.PROTOCOL)
+        self.establish_connection()
 
-def on_disconnect(client, userdata, rc):
-    print("Disconnect, reason: " + str(rc))
-    print("Disconnect, reason: " + str(client))
+    def establish_connection(self):
+        self.connect(self.SERVER_IP, self.SERVER_PORT, keepalive=60)
+        self.loop_forever()
 
-def on_message(client, userdata, msg):
-    if msg.payload.decode("utf-8") == OPEN_COMMAND:
-        # TODO: remove strip/lower
-        send_cmd(OPEN_COMMAND.strip().lower())
-    print(msg.topic+" "+str(msg.payload))
+    def on_connect(self, client, userdata, flags, rc):
+        client.publish(self.MQTT_TOPIC, self.DEVICE_NAME)
+        client.subscribe(self.MQTT_TOPIC)
+        # TODO: check if web-server available (ping-request)
+        # TODO: if server available make discovery (send amount of locks)
+        print('MQTT connection established, discovery process finished.')
 
+    def on_disconnect(self, client, userdata, rc):
+        print(f'Disconnect, reason: {rc}')
+        # TODO: add re-connect mechanism
 
-client = mqtt.Client(CLIENT_ID, protocol=mqtt.MQTTv31)
-client.on_connect = on_connect
-client.on_disconnect = on_disconnect
-client.on_message = on_message
-client.connect(SERVER_IP, SERVER_PORT, keepalive=60)
-client.loop_forever()
+    def on_message(self, client, userdata, msg):
+        if msg.payload.decode("utf-8") == self.OPEN_COMMAND:
+            # TODO: remove strip/lower
+            send_cmd(self.OPEN_COMMAND.strip().lower())
+        # TODO: add another commands handlers
 
+        print(f'TOPIC: {msg.topic}; COMMAND: {msg.payload}')
+
+if __name__ == '__main__':
+    MQTTConnectionManager()
